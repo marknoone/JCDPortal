@@ -63,6 +63,9 @@ type Contract struct {
 
 	// CommercialName is the commercial name of the contract (the one users usually know)
 	CommercialName string `json:"commercial_name"`
+
+	Parks    []Park
+	Stations []Station
 }
 
 // Stands indicates bike capacity
@@ -79,3 +82,13 @@ type Position struct {
 	Latitude  float32 `json:"latitude"`
 	Longitude float32 `json:"longitude"`
 }
+
+// jcdData is an interface to only allow the above data types enter
+// the portal request target (Hidden is only necessary for Type Check and not user)
+type jcdData interface {
+	jcd()
+}
+
+func (Station) jcd()  {}
+func (Park) jcd()     {}
+func (Contract) jcd() {}

@@ -39,7 +39,7 @@ type Park struct {
 
 	// Address of the park. As it is raw data, sometimes it will be more of a comment than an address.
 	Address string `json:"address"`
-	ZipCode int    `json:"zipCode"` // Park's zip code
+	ZipCode string `json:"zipCode"` // Park's zip code
 
 	Status   string   `json:"status"`   // Status indicates whether this station is 'CLOSED' or 'OPEN'
 	Position Position `json:"position"` // Position of the station in WGS84 format
@@ -63,18 +63,17 @@ type Contract struct {
 
 	// CommercialName is the commercial name of the contract (the one users usually know)
 	CommercialName string `json:"commercial_name"`
-
-	Parks    []Park
-	Stations []Station
 }
 
-// Stands indicates bike capacity
+// Stands indicates bike stand state
 type Stands struct {
-	Capacity       int `json:"capacity"`
-	Availibilities struct {
-		Bikes  int `json:"bikes"`
-		Stands int `json:"stands"`
-	} `json:"availabilities"`
+	Capacity       int            `json:"capacity"`
+	Availabilities Availabilities `json:"availabilities"`
+}
+
+type Availabilities struct {
+	Bikes  int `json:"bikes"`
+	Stands int `json:"stands"`
 }
 
 // Position of the station in WGS84 format
@@ -82,13 +81,3 @@ type Position struct {
 	Latitude  float32 `json:"latitude"`
 	Longitude float32 `json:"longitude"`
 }
-
-// jcdData is an interface to only allow the above data types enter
-// the portal request target (Hidden is only necessary for Type Check and not user)
-type jcdData interface {
-	jcd()
-}
-
-func (Station) jcd()  {}
-func (Park) jcd()     {}
-func (Contract) jcd() {}

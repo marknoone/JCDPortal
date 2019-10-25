@@ -28,12 +28,10 @@ func TestPortal(t *testing.T) {
 
 	// Response Cases
 	rc := map[string][]byte{
-		fmt.Sprintf("/vls/v3/contracts"):                                               bytesWithNoErr(json.Marshal([]jcd.Contract{jcd.DummyContract})),
-		fmt.Sprintf("/vls/v3/stations"):                                                bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation})),
-		fmt.Sprintf("/vls/v3/stations?contract=%s", testContractName):                  bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation})),
-		fmt.Sprintf("/parking/v1/contracts/%s/parks", testContractName):                bytesWithNoErr(json.Marshal([]jcd.Park{jcd.DummyPark})),
-		fmt.Sprintf("/vls/v3/stations/%d?contract=%s", testNumber, testContractName):   bytesWithNoErr(json.Marshal(jcd.DummyStation)),
-		fmt.Sprintf("/parking/v1/contracts/%s/parks/%d", testContractName, testNumber): bytesWithNoErr(json.Marshal(jcd.DummyPark)),
+		fmt.Sprintf("/vls/v3/contracts"):                                             bytesWithNoErr(json.Marshal([]jcd.Contract{jcd.DummyContract})),
+		fmt.Sprintf("/vls/v3/stations"):                                              bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation})),
+		fmt.Sprintf("/vls/v3/stations?contract=%s", testContractName):                bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation})),
+		fmt.Sprintf("/vls/v3/stations/%d?contract=%s", testNumber, testContractName): bytesWithNoErr(json.Marshal(jcd.DummyStation)),
 	}
 
 	// Server
@@ -68,9 +66,7 @@ func TestPortal(t *testing.T) {
 		{target: &[]jcd.Contract{}, opts: nil, expected: bytesWithNoErr(json.Marshal([]jcd.Contract{jcd.DummyContract}))},
 		{target: &[]jcd.Station{}, opts: nil, expected: bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation}))},
 		{target: &[]jcd.Station{}, opts: &jcd.RequestOptions{ContractName: testContractName}, expected: bytesWithNoErr(json.Marshal([]jcd.Station{jcd.DummyStation}))},
-		{target: &[]jcd.Park{}, opts: &jcd.RequestOptions{ContractName: testContractName}, expected: bytesWithNoErr(json.Marshal([]jcd.Park{jcd.DummyPark}))},
 		{target: &jcd.Station{}, opts: &jcd.RequestOptions{ContractName: testContractName, Number: testNumber}, expected: bytesWithNoErr(json.Marshal(jcd.DummyStation))},
-		{target: &jcd.Park{}, opts: &jcd.RequestOptions{ContractName: testContractName, Number: testNumber}, expected: bytesWithNoErr(json.Marshal(jcd.DummyPark))},
 	}
 
 	for _, tc := range tcs {

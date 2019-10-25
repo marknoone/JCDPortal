@@ -31,8 +31,8 @@ type Station struct {
 	OverflowStands Stands `json:"overflowStands"`
 }
 
-// Park reflects the location, information and status of a JCDecaux Bike Parking facility
-type Park struct {
+// park reflects the location, information and status of a JCDecaux Bike Parking facility
+type park struct {
 	Name         string `json:"name"`         // Name of the park
 	Number       int    `json:"number"`       // The identification number of the park
 	ContractName string `json:"contractName"` // Contract name of the park

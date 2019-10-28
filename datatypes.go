@@ -31,8 +31,24 @@ type Station struct {
 	OverflowStands Stands `json:"overflowStands"`
 }
 
-// park reflects the location, information and status of a JCDecaux Bike Parking facility
-type park struct {
+// Refresh will refresh all data deemed "dynamic" by the JCD docs
+func (s *Station) Refresh(r *apiRequester) error {
+	result, err := r.GetStation(s.ContractName, s.Number)
+	if err != nil {
+		return err
+	}
+
+	s.Status = result.Status
+	s.Connected = result.Connected
+	s.LastUpdate = result.LastUpdate
+	s.MainStands = result.MainStands
+	s.OverflowStands = result.OverflowStands
+	s.TotalStands = result.TotalStands
+	return nil
+}
+
+// Park reflects the location, information and status of a JCDecaux Bike Parking facility
+type Park struct {
 	Name         string `json:"name"`         // Name of the park
 	Number       int    `json:"number"`       // The identification number of the park
 	ContractName string `json:"contractName"` // Contract name of the park

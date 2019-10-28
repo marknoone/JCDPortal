@@ -2,10 +2,8 @@ package jcdportal
 
 import (
 	"encoding/json"
-	"fmt"
-	"reflect"
 	"errors"
-
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -13,28 +11,15 @@ import (
 const (
 	DefaultHost = "https://api.jcdecaux.com"
 	StdService  = "vls/v3"
+	ParkService = "parking/v1"
 )
 
 var (
-	// NoIDAvailible error is returned when the request executer cannot find
-	// enough identification information in the object to carry out a request
-	NoIDAvailibleErr = errors.New("no identification field found")
+	// UnauthorizedErr reurned when API key cannot access resource
+	UnauthorizedErr = errors.New("request error: apikey unauthorized")
 
-	// NoResultFoundErr is thrown when the specified resource cannot be found
-	NoResultFoundErr = errors.New("no result found")
-
-	// TooManyResultsErr is thrown when many results are found when only one
-	// is expected
-	TooManyResultsErr = errors.New("response carried too many results")
-
-	// ExpectedPointerErr is thrown when a non-pointer value is passed
-	// into the Find/Refresh functions
-	ExpectedPointerErr = errors.New("expected pointer variable")
-
-	// UnrecognisedTypeErr is thrown when the consumer passes a non JCD portal
-	// data type into the Find/Refresh functions
-	UnrecognisedTypeErr = errors.New(
-		"unexpected type: function only supports portal data types")
+	// NoResourceFoundErr is thrown when the specified resource cannot be found
+	NoResourceFoundErr = errors.New("request error: no resource found")
 )
 
 type apiRequester struct {
@@ -42,27 +27,87 @@ type apiRequester struct {
 	host string
 }
 
-type RequestOptions struct {
-	Number       int
-	ContractName string
-}
-
-func NewRequester(key string) apiRequester { return apiRequester{key: key} }
-func (r apiRequester) WithHost(h string) apiRequester {
+func NewRequester(key string) *apiRequester { return &apiRequester{key: key} }
+func (r *apiRequester) WithHost(h string) {
 	r.host = h
-	return r
 }
 
-func (r apiRequester) Refresh(i interface{}) error { panic("Not yet implemented") }
-func (r apiRequester) Find(i interface{}, o *RequestOptions) error {
-	if reflect.ValueOf(i).Kind() != reflect.Ptr {
-		return ExpectedPointerErr
+func (r *apiRequester) GetContracts() (*[]Contract, error) {
+	var (
+		// value considers current contract amount of 27 total
+		result = make([]Contract, 0, 50)
+		uri    = fmt.Sprintf("%s/%s/contracts", r.host, StdService)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) GetStations() (*[]Station, error) {
+	var (
+		result = make([]Station, 0, 3000) // value considers current 2620 total
+		uri    = fmt.Sprintf("%s/%s/stations", r.host, StdService)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) GetParks(contractName string) (*[]Park, error) {
+	var (
+		result = make([]Park, 0, 250)
+		uri    = fmt.Sprintf("%s/%s/contracts/%s/parks", r.host, ParkService, contractName)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) GetStationsInContract(contractName string) (*[]Station, error) {
+
+	var (
+		// value considers current largest contract in Lyon with 400 total
+		result = make([]Station, 0, 500)
+		uri    = fmt.Sprintf("%s/%s/stations?contract=%s", r.host, StdService, contractName)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) GetPark(contractName string, number int) (*Park, error) {
+	var (
+		result Park
+		uri    = fmt.Sprintf("%s/%s/contracts/%s/parks/%d", r.host, ParkService, contractName, number)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) GetStation(contractName string, number int) (*Station, error) {
+	var (
+		result Station
+		uri    = fmt.Sprintf("%s/%s/stations/%d?contract=%s", r.host, StdService, number, contractName)
+	)
+
+	err := r.makeRequest(uri, &result)
+	return &result, err
+}
+
+func (r *apiRequester) makeRequest(uri string, dest interface{}) error {
+	if r.host == "" {
+		r.host = DefaultHost
 	}
 
-	reqURL, err := r.determineUrl(i, o)
+	reqURL, err := url.Parse(uri)
 	if err != nil {
 		return err
 	}
+
+	qv := reqURL.Query()
+	qv.Set("apiKey", r.key)
+	reqURL.RawQuery = qv.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
 	if err != nil {
@@ -76,57 +121,16 @@ func (r apiRequester) Find(i interface{}, o *RequestOptions) error {
 	}
 	defer resp.Body.Close()
 
-	return json.NewDecoder(resp.Body).Decode(i)
-}
-
-// determineUrl creates a URL object based off of the API spec
-// found here: https://developer.jcdecaux.com/#/opendata/vls?page=dynamic
-func (r apiRequester) determineUrl(i interface{}, o *RequestOptions) (*url.URL, error) {
-	if r.host == "" {
-		r.host = DefaultHost
-	}
-
-	var (
-		baseType reflect.Type
-		reqUrl   *url.URL
-		qv       url.Values
-	)
-
-	iElem := reflect.ValueOf(i).Elem()
-	if iElem.Kind() == reflect.Slice || iElem.Kind() == reflect.Array {
-		baseType = reflect.ValueOf(i).Elem().Index(0).Type()
-	} else {
-		baseType = reflect.ValueOf(i).Elem().Type()
-	}
-
-	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", r.host, StdService))
-	if err != nil {
-		return nil, err
-	}
-
-	qv, err = url.ParseQuery(fmt.Sprintf("apiKey=%S", r.key))
-	if err != nil {
-		return nil, err
-	}
-
-	switch baseType {
-	case reflect.TypeOf(Contract{}):
-		reqUrl.RawQuery = qv.Encode()
-		return reqUrl.Parse("/contracts")
-	case reflect.TypeOf(Station{}):
-		reqUrl.Path = reqUrl.Path + "/stations"
+	switch resp.StatusCode {
+	case 200:
+		return json.NewDecoder(resp.Body).Decode(dest)
+	case 403:
+		return UnauthorizedErr
+	case 404:
+		return NoResourceFoundErr
 	default:
-		return nil, UnrecognisedTypeErr
+		return fmt.Errorf(
+			"request error occured: recieved http status code (%d)",
+			resp.StatusCode)
 	}
-
-	if o.Number != 0 {
-		reqUrl.Path = reqUrl.Path + fmt.Sprintf("/%d", o.Number)
-	}
-
-	if o.ContractName != "" {
-		qv.Add("contract", o.ContractName)
-	}
-
-	reqUrl.RawQuery = qv.Encode()
-	return reqUrl.Parse("")
 }

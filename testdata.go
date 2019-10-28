@@ -39,7 +39,7 @@ var (
 		},
 	}
 
-	dummyPark = park{
+	DummyPark = Park{
 		ContractName: "nantes",
 		Name:         "GARE DE PONT ROUSSEAU NORD",
 		Number:       89,
